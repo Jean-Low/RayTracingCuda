@@ -8,18 +8,6 @@
 
 using namespace std;
 
-/*
-class sphere
-{
-    public:
-        __host__ __device__ sphere() {}
-        __host__ __device__ sphere(vec3 _center, vec3 _color, float _radious) { center = _center; color = _color; radious = _radious; };
-        vec3 center;
-        vec3 color;
-        float radious;
-
-};
-*/
 
 __device__
 float hit_sphere(const vec3& center, float radious, const ray& r){
@@ -50,7 +38,6 @@ vec3 color(const ray& r,const int worldsize, const vec3 _sphere_centers[], const
             vec3 dif = normal - (unit_vector(r.direction()));
             float itensity = dif.length() - 1;
             //itensity = 1 - itensity;
-            //printf("%f\n",itensity);
             if(itensity < 0){
                 itensity = 0.0f;
             }
@@ -65,22 +52,22 @@ vec3 color(const ray& r,const int worldsize, const vec3 _sphere_centers[], const
 }
 
 __device__
-float pseudo_rand(float a, float b, float c, float d){ //return a "random" number betwen 1 and -1 based on 4 floats as seed (it is not random actually, but it is enough) 
+//return a "random" number betwen 1 and -1 based on 4 floats as seed (it is not random actually, but it is enough) 
+float pseudo_rand(float a, float b, float c, float d){ 
     
+    //a controlled chaotic expression
     float val = ( (((a + 134.854f + c)/3.3f) * c) / (d + 3.645f) );
     if(val == 0.0f){
-        val = (c + d + 89.423f) * 9.308f * d * 1.54f * c; 
+        //if a or c is zero, use this other expression
+        val = (c + d + 89.423f) * 9.308f * d * 1.54f + c; 
     }
     val *= 11.245f;
 
-    //val = val % 2; //AAAAAAAAAAA i cant use modulo on floats inside CUDA WTF!!!
+    //val = val % 2; //I cant use modulo on floats inside CUDA!!!
     //workaround:
-    int precision = 100000;
-    //printf("float-%f, int-%i, mod%i\n",val, (int)val, (int)val %  precision);
-    //val *= 10 * precision; //move floating point to the left
+    int precision = 100000; //how many decimal slots i want to keep (log(10), 5 in this case)
     int ret = (int) val % (2 * precision); //module it with some precision
     val = (float)ret / (precision); // make ret a floating point
-    //printf("-%f\n",val);
     
     return (val - 1.0f);
 }
@@ -117,11 +104,6 @@ void renderPixel(int nx, int ny, int channels, int antia, int _outvec[], vec3 _s
         
     }
     col /= antia;
-    
-    if((x % 1000 == 0) && (y % 1000 == 0)){
-        printf("--- index - %i x-%i y-%i diry-%f u-%f v-%f\n",index,x,y,r.direction()[1],u,v);
-        
-    }
     
 
     //write r g and b on outvec
@@ -231,6 +213,9 @@ int main() {
     
     //free memory
     cudaFree(outvec);
+    cudaFree(sphere_centers);
+    cudaFree(sphere_colors);
+    cudaFree(sphere_radious);
     
     //done
     cout << "DONE\n";
